@@ -21,7 +21,7 @@ function buildDepartments() {
     },
     {
       id: "dept_programacion_produccion",
-      title: "Programacion y Produccion",
+      title: "Programacion y Prod.",
       description: "Pedidos y produccion",
       phone: process.env.DEPT_PROGRAMACION_PRODUCCION,
     },
