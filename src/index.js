@@ -1,14 +1,27 @@
 require("dotenv").config();
 const express = require("express");
+const session = require("express-session");
 const { buildDepartments } = require("./departments");
 const {
   sendDepartmentMenu,
   sendDepartmentConfirmation,
   sendText,
 } = require("./whatsapp");
+const adminRouter = require("./admin");
 
 const app = express();
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+app.use(
+  session({
+    name: "wb_admin_sid",
+    secret: process.env.SESSION_SECRET || "cambia-esto-en-produccion",
+    resave: false,
+    saveUninitialized: false,
+    cookie: { httpOnly: true, sameSite: "lax", maxAge: 1000 * 60 * 60 * 4 },
+  })
+);
+app.use("/admin", adminRouter);
 
 // --- Verificacion del webhook (Meta hace un GET una sola vez al configurarlo) ---
 app.get("/webhook", (req, res) => {
