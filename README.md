@@ -16,6 +16,7 @@ directo (`wa.me/...`) del area elegida.
 
 | Archivo | Contenido |
 | --- | --- |
+| [docs/GUIA_CONFIGURACION.md](docs/GUIA_CONFIGURACION.md) | **Empezar aca.** Tutorial completo: numero nuevo vs. migrar el numero que ya usa el cliente, token permanente, y manual del panel `/admin` |
 | [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) | Como funciona el bot, flujo de mensajes, estructura del codigo |
 | [docs/META_SETUP.md](docs/META_SETUP.md) | Guia paso a paso para configurar la app de Meta y WhatsApp Cloud API desde cero |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Como esta desplegado en el VPS y como actualizar el bot en produccion |
