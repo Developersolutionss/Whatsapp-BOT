@@ -8,6 +8,7 @@ const {
   sendText,
 } = require("./whatsapp");
 const adminRouter = require("./admin");
+const privacyRouter = require("./privacy");
 
 const app = express();
 app.use(express.json());
@@ -22,6 +23,7 @@ app.use(
   })
 );
 app.use("/admin", adminRouter);
+app.use(privacyRouter); // /privacidad: Meta exige una URL publica de politica de privacidad
 
 // --- Verificacion del webhook (Meta hace un GET una sola vez al configurarlo) ---
 app.get("/webhook", (req, res) => {

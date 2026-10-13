@@ -21,6 +21,7 @@ directo (`wa.me/...`) del area elegida.
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Como esta desplegado en el VPS y como actualizar el bot en produccion |
 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Errores conocidos y como resolverlos |
 | [docs/CLIENT_CHECKLIST.md](docs/CLIENT_CHECKLIST.md) | Datos que debe entregar Plasticos Superior para pasar a produccion |
+| [docs/PRIVACIDAD.md](docs/PRIVACIDAD.md) | Pagina `/privacidad` que Meta exige para publicar la app (pendiente de desplegar/revisar) |
 
 ## Instalacion local (desarrollo)
 
@@ -38,6 +39,7 @@ src/
   index.js         Servidor Express: verificacion del webhook + recepcion de mensajes
   whatsapp.js       Llamadas a la Cloud API (mandar menu, mandar confirmacion)
   departments.js    Catalogo de los 4 departamentos (id, titulo, descripcion, telefono)
+  privacy.js        Pagina publica /privacidad (Meta la exige para publicar la app)
 .env.example        Variables de entorno necesarias, con comentarios
 docs/               Documentacion detallada (ver tabla arriba)
 ```

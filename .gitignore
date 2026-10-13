@@ -1,3 +1,6 @@
 node_modules/
 .env
 *.log
+
+# Notas locales de instalacion (contienen secretos)
+INSTALACION_LOCAL.md

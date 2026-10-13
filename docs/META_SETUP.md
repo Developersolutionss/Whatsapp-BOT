@@ -109,3 +109,14 @@ modo prueba, pero si para:
 - Evitar restricciones de envio en el numero de produccion.
 
 Ver el detalle de que datos juntar en [CLIENT_CHECKLIST.md](CLIENT_CHECKLIST.md).
+
+## 8. Publicar la app (modo En vivo)
+
+Mientras la app este **sin publicar**, Meta solo entrega webhooks de prueba y
+de usuarios con rol en la app. Para atender clientes reales hay que publicarla
+(menu de la app -> **Publicar**).
+
+**Meta exige una URL publica de politica de privacidad** (Configuracion de la
+app -> Basica) antes de permitir publicar. Este proyecto sirve una en
+`/privacidad`; ver [PRIVACIDAD.md](PRIVACIDAD.md) (pendiente de desplegar y de
+revision del cliente).

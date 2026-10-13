@@ -63,6 +63,11 @@ prueba).
 - [ ] Confirmar los nombres de los 4 departamentos tal como deben verse en
       el menu
 
+## 8. Politica de privacidad (requerida por Meta para publicar la app)
+
+- [ ] Aprobar el texto de la pagina `/privacidad` (ver [PRIVACIDAD.md](PRIVACIDAD.md)) o entregar la URL de su politica oficial
+- [ ] Correo de contacto para temas de datos personales
+
 ---
 
 Una vez reunidos estos datos, se cargan en el `.env` del servidor (ver
