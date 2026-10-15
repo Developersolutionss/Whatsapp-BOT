@@ -67,32 +67,32 @@ function layout(title, bodyHtml, wide, centered) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${title} - Panel Plasticos Superior</title>
 <style>
-  body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 2rem 1rem; background-image: radial-gradient(circle at 50% -10%, rgba(34,197,94,.14), transparent 55%); }
+  :root { --accent: #4b7a52; --accent-dark: #3c6342; --ink: #e4e6e8; --muted: #8b93a1; --panel: #1c2024; --panel-line: #2b3036; --field: #15181b; }
+  body { font-family: system-ui, sans-serif; background: #121417; color: var(--ink); margin: 0; padding: 2rem 1rem; }
   body.centered { min-height: 100vh; box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
-  .card { max-width: 640px; margin: 0 auto; background: #1e293b; border-radius: 12px; padding: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,.3); }
+  .card { max-width: 640px; margin: 0 auto; background: var(--panel); border: 1px solid var(--panel-line); border-radius: 10px; padding: 2rem; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
   .card.wide { max-width: 1080px; }
-  .card.login-card { max-width: 380px; border: 1px solid #243244; }
-  h1 { font-size: 1.4rem; margin-top: 0; }
+  .card.login-card { max-width: 380px; }
+  h1 { font-size: 1.3rem; margin-top: 0; font-weight: 600; }
   h1.login-title { text-align: center; margin-bottom: .2rem; }
-  .login-sub { text-align: center; color: #64748b; font-size: .85rem; margin: 0 0 1.6rem; }
-  .login-logo-plate { background: #f5f6f3; border-radius: 16px; padding: 14px 18px; margin: 0 auto 1.4rem; max-width: 280px; box-shadow: 0 12px 24px rgba(0,0,0,.35); }
+  .login-sub { text-align: center; color: var(--muted); font-size: .85rem; margin: 0 0 1.6rem; }
+  .login-logo-plate { background: #f1f1ef; border-radius: 10px; padding: 14px 18px; margin: 0 auto 1.4rem; max-width: 280px; }
   .login-logo-plate img { width: 100%; height: auto; display: block; }
-  label { display: block; margin: 1rem 0 .3rem; font-size: .9rem; color: #94a3b8; }
-  input[type=text], input[type=password] { width: 100%; box-sizing: border-box; padding: .6rem .7rem; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 1rem; transition: border-color .15s, box-shadow .15s; }
-  input:focus { outline: none; border-color: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,.22); }
-  input::placeholder { color: #475569; }
-  button { margin-top: 1.5rem; width: 100%; padding: .8rem; border: none; border-radius: 8px; background: #22c55e; color: #052e16; font-weight: 600; font-size: 1rem; cursor: pointer; transition: background .15s, transform .15s; }
-  button:hover { background: #16a34a; }
-  button:active { transform: translateY(1px); }
-  .hint { font-size: .8rem; color: #64748b; margin-top: .2rem; }
-  .charcount { font-size: .75rem; color: #64748b; margin-top: .2rem; text-align: right; }
-  .charcount.over { color: #f87171; font-weight: 600; }
-  .flash-ok { background: #14532d; color: #bbf7d0; padding: .7rem 1rem; border-radius: 8px; margin-bottom: 1rem; }
-  .flash-err { background: #450a0a; color: #fecaca; padding: .7rem 1rem; border-radius: 8px; margin-bottom: 1rem; }
-  a.payment-link { display: inline-block; margin-top: .3rem; color: #93c5fd; }
-  .logout { float: right; font-size: .85rem; color: #94a3b8; text-decoration: none; }
-  fieldset { border: 1px solid #334155; border-radius: 8px; margin-top: 1.5rem; }
-  legend { padding: 0 .5rem; color: #94a3b8; font-size: .9rem; }
+  label { display: block; margin: 1rem 0 .3rem; font-size: .85rem; color: var(--muted); }
+  input[type=text], input[type=password] { width: 100%; box-sizing: border-box; padding: .6rem .7rem; border-radius: 6px; border: 1px solid var(--panel-line); background: var(--field); color: var(--ink); font-size: 1rem; transition: border-color .15s; }
+  input:focus { outline: none; border-color: var(--accent); }
+  input::placeholder { color: #51565c; }
+  button { margin-top: 1.5rem; width: 100%; padding: .75rem; border: none; border-radius: 6px; background: var(--accent); color: #f3f6f3; font-weight: 600; font-size: .95rem; cursor: pointer; transition: background .15s; }
+  button:hover { background: var(--accent-dark); }
+  .hint { font-size: .8rem; color: var(--muted); margin-top: .2rem; }
+  .charcount { font-size: .75rem; color: var(--muted); margin-top: .2rem; text-align: right; }
+  .charcount.over { color: #c9766f; font-weight: 600; }
+  .flash-ok { background: #203625; color: #bcd4bf; padding: .7rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-size: .9rem; }
+  .flash-err { background: #3a2323; color: #e0bcbc; padding: .7rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-size: .9rem; }
+  a.payment-link { display: inline-block; margin-top: .3rem; color: #8fb0d8; }
+  .logout { float: right; font-size: .85rem; color: var(--muted); text-decoration: none; }
+  fieldset { border: 1px solid var(--panel-line); border-radius: 8px; margin-top: 1.5rem; }
+  legend { padding: 0 .5rem; color: var(--muted); font-size: .9rem; }
 
   .layout-grid { display: grid; grid-template-columns: 1fr; gap: 2rem; margin-top: 1rem; }
   @media (min-width: 880px) { .layout-grid { grid-template-columns: 1fr 360px; } }
@@ -117,7 +117,7 @@ function layout(title, bodyHtml, wide, centered) {
   .preview-label { font-size: .8rem; color: #64748b; margin-bottom: .5rem; }
 
   .panel-header { display: flex; align-items: center; gap: .9rem; margin-bottom: 1rem; }
-  .panel-logo { height: 36px; width: auto; border-radius: 6px; background: #f5f6f3; padding: 3px 6px; }
+  .panel-logo { height: 36px; width: auto; border-radius: 6px; background: #f1f1ef; padding: 3px 6px; }
   .panel-header h1 { margin: 0; }
 </style>
 </head>
