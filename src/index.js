@@ -1,4 +1,5 @@
 require("dotenv").config();
+const path = require("path");
 const express = require("express");
 const session = require("express-session");
 const { buildDepartments } = require("./departments");
@@ -22,6 +23,7 @@ app.use(
     cookie: { httpOnly: true, sameSite: "lax", maxAge: 1000 * 60 * 60 * 4 },
   })
 );
+app.use(express.static(path.join(__dirname, "..", "public")));
 app.use("/admin", adminRouter);
 app.use(privacyRouter); // /privacidad: Meta exige una URL publica de politica de privacidad
 

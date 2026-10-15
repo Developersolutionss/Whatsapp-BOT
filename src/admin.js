@@ -59,7 +59,7 @@ function clearAttempts(ip) {
   loginAttempts.delete(ip);
 }
 
-function layout(title, bodyHtml, wide) {
+function layout(title, bodyHtml, wide, centered) {
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -67,15 +67,23 @@ function layout(title, bodyHtml, wide) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${title} - Panel Plasticos Superior</title>
 <style>
-  body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 2rem 1rem; }
+  body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 2rem 1rem; background-image: radial-gradient(circle at 50% -10%, rgba(34,197,94,.14), transparent 55%); }
+  body.centered { min-height: 100vh; box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
   .card { max-width: 640px; margin: 0 auto; background: #1e293b; border-radius: 12px; padding: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,.3); }
   .card.wide { max-width: 1080px; }
+  .card.login-card { max-width: 380px; border: 1px solid #243244; }
   h1 { font-size: 1.4rem; margin-top: 0; }
+  h1.login-title { text-align: center; margin-bottom: .2rem; }
+  .login-sub { text-align: center; color: #64748b; font-size: .85rem; margin: 0 0 1.6rem; }
+  .login-logo-plate { background: #f5f6f3; border-radius: 16px; padding: 14px 18px; margin: 0 auto 1.4rem; max-width: 280px; box-shadow: 0 12px 24px rgba(0,0,0,.35); }
+  .login-logo-plate img { width: 100%; height: auto; display: block; }
   label { display: block; margin: 1rem 0 .3rem; font-size: .9rem; color: #94a3b8; }
-  input[type=text], input[type=password] { width: 100%; box-sizing: border-box; padding: .6rem .7rem; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 1rem; }
+  input[type=text], input[type=password] { width: 100%; box-sizing: border-box; padding: .6rem .7rem; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 1rem; transition: border-color .15s, box-shadow .15s; }
+  input:focus { outline: none; border-color: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,.22); }
   input::placeholder { color: #475569; }
-  button { margin-top: 1.5rem; width: 100%; padding: .8rem; border: none; border-radius: 8px; background: #22c55e; color: #052e16; font-weight: 600; font-size: 1rem; cursor: pointer; }
+  button { margin-top: 1.5rem; width: 100%; padding: .8rem; border: none; border-radius: 8px; background: #22c55e; color: #052e16; font-weight: 600; font-size: 1rem; cursor: pointer; transition: background .15s, transform .15s; }
   button:hover { background: #16a34a; }
+  button:active { transform: translateY(1px); }
   .hint { font-size: .8rem; color: #64748b; margin-top: .2rem; }
   .charcount { font-size: .75rem; color: #64748b; margin-top: .2rem; text-align: right; }
   .charcount.over { color: #f87171; font-weight: 600; }
@@ -107,10 +115,14 @@ function layout(title, bodyHtml, wide) {
   .sheet-row .warn { color: #f87171; font-size: .72rem; margin-top: .2rem; }
   .preview-reset { font-size: .78rem; color: #53bdeb; cursor: pointer; text-align: center; margin-top: .3rem; }
   .preview-label { font-size: .8rem; color: #64748b; margin-bottom: .5rem; }
+
+  .panel-header { display: flex; align-items: center; gap: .9rem; margin-bottom: 1rem; }
+  .panel-logo { height: 36px; width: auto; border-radius: 6px; background: #f5f6f3; padding: 3px 6px; }
+  .panel-header h1 { margin: 0; }
 </style>
 </head>
-<body>
-  <div class="card${wide ? " wide" : ""}">${bodyHtml}</div>
+<body${centered ? ' class="centered"' : ""}>
+  <div class="card${wide ? " wide" : ""}${centered ? " login-card" : ""}">${bodyHtml}</div>
 </body>
 </html>`;
 }
@@ -126,16 +138,20 @@ router.get("/login", (req, res) => {
     layout(
       "Ingresar",
       `
-    <h1>Panel Plasticos Superior</h1>
+    <div class="login-logo-plate"><img src="/logo.jpeg" alt="Plasticos Superior San Judas SAS"></div>
+    <h1 class="login-title">Panel de administracion</h1>
+    <p class="login-sub">Bot de WhatsApp</p>
     ${error}
     <form method="post" action="/admin/login">
       <label>Usuario</label>
-      <input type="text" name="username" autocomplete="username" required>
+      <input type="text" name="username" autocomplete="username" required autofocus>
       <label>Contrasena</label>
       <input type="password" name="password" autocomplete="current-password" required>
       <button type="submit">Ingresar</button>
     </form>
-  `
+  `,
+      false,
+      true
     )
   );
 });
@@ -208,7 +224,10 @@ router.get("/", requireAuth, (req, res) => {
       `
     <a class="logout" href="#" onclick="document.getElementById('logoutForm').submit();return false;">Salir</a>
     <form id="logoutForm" method="post" action="/admin/logout" style="display:none"></form>
-    <h1>Configuracion del bot</h1>
+    <div class="panel-header">
+      <img src="/logo.jpeg" alt="Plasticos Superior San Judas SAS" class="panel-logo">
+      <h1>Configuracion del bot</h1>
+    </div>
     ${ok}
 
     <fieldset>
