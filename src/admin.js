@@ -2,15 +2,13 @@ const express = require("express");
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const { execFile } = require("child_process");
-const { EDITABLE_KEYS, SECRET_KEYS, readEditableValues, updateEnvValues, mask } = require("./envStore");
+const { EDITABLE_KEYS, readEditableValues, updateEnvValues, updateAdminPasswordHash } = require("./envStore");
 const { buildDepartments } = require("./departments");
+const stats = require("./stats");
 
 const router = express.Router();
 
 const FIELD_LABELS = {
-  WHATSAPP_TOKEN: "Token de acceso de WhatsApp (Meta)",
-  PHONE_NUMBER_ID: "Phone Number ID",
-  VERIFY_TOKEN: "Verify Token del webhook",
   DEPT_CONTABILIDAD: "Numero - Contabilidad",
   DEPT_PUNTO_DE_VENTA: "Numero - Punto de Venta",
   DEPT_ADMINISTRACION: "Numero - Administracion",
@@ -119,6 +117,14 @@ function layout(title, bodyHtml, wide, centered) {
   .panel-header { display: flex; align-items: center; gap: .9rem; margin-bottom: 1rem; }
   .panel-logo { height: 36px; width: auto; border-radius: 6px; background: #f1f1ef; padding: 3px 6px; }
   .panel-header h1 { margin: 0; }
+
+  .stats-row { display: flex; flex-wrap: wrap; gap: 1.2rem; margin-bottom: 1rem; }
+  .stat { display: flex; flex-direction: column; }
+  .stat-n { font-size: 1.6rem; font-weight: 700; color: var(--ink); }
+  .stat-l { font-size: .78rem; color: var(--muted); }
+  .contacts-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  .contacts-table th, .contacts-table td { text-align: left; padding: .4rem .5rem; border-bottom: 1px solid var(--panel-line); color: var(--ink); }
+  .contacts-table th { color: var(--muted); font-weight: 600; font-size: .75rem; text-transform: uppercase; }
 </style>
 </head>
 <body${centered ? ' class="centered"' : ""}>
@@ -189,6 +195,8 @@ router.get("/", requireAuth, (req, res) => {
   if (!req.session.csrfToken) req.session.csrfToken = crypto.randomBytes(24).toString("hex");
   const csrf = req.session.csrfToken;
   const ok = req.query.ok ? `<div class="flash-ok">Cambios guardados. El bot se reinicio con la nueva configuracion.</div>` : "";
+  const pwOk = req.query.pw === "ok" ? `<div class="flash-ok">Contrasena actualizada.</div>` : "";
+  const pwErr = req.query.pw === "err" ? `<div class="flash-err">La contrasena actual no es correcta, o la nueva no coincide.</div>` : "";
 
   const billingUrl = values.META_BILLING_URL || "https://business.facebook.com/billing_hub/payment_methods/";
 
@@ -204,18 +212,27 @@ router.get("/", requireAuth, (req, res) => {
 
   const fieldsHtml = EDITABLE_KEYS.filter((k) => k !== "META_BILLING_URL")
     .map((key) => {
-      const isSecret = SECRET_KEYS.has(key);
-      const current = values[key];
-      const placeholder = isSecret ? (current ? `Actual: ${mask(current)} (dejar en blanco para no cambiar)` : "No configurado") : "";
-      const inputValue = isSecret ? "" : current;
       const previewAttr = PREVIEW_FIELDS.has(key) ? ` data-preview="${key}"` : "";
       const counter = CHAR_LIMITS[key] ? `<div class="charcount" data-counter="${key}"></div>` : "";
       return `
       <label>${FIELD_LABELS[key]}</label>
-      <input type="text" name="${key}" value="${escapeHtml(inputValue)}" placeholder="${escapeHtml(placeholder)}"${previewAttr}>
+      <input type="text" name="${key}" value="${escapeHtml(values[key])}"${previewAttr}>
       ${counter}
     `;
     })
+    .join("");
+
+  const summary = stats.getSummary(30);
+  const contactsRows = summary.contacts
+    .map(
+      (c) => `
+      <tr>
+        <td>${escapeHtml(c.phone)}</td>
+        <td>${formatDate(c.firstSeen)}</td>
+        <td>${formatDate(c.lastSeen)}</td>
+        <td>${c.messageCount}</td>
+      </tr>`
+    )
     .join("");
 
   res.send(
@@ -229,11 +246,45 @@ router.get("/", requireAuth, (req, res) => {
       <h1>Configuracion del bot</h1>
     </div>
     ${ok}
+    ${pwOk}
+    ${pwErr}
+
+    <fieldset>
+      <legend>Actividad</legend>
+      <div class="stats-row">
+        <div class="stat"><span class="stat-n">${summary.totalIncoming}</span><span class="stat-l">Mensajes recibidos</span></div>
+        <div class="stat"><span class="stat-n">${summary.totalOutgoing}</span><span class="stat-l">Mensajes enviados</span></div>
+        <div class="stat"><span class="stat-n">${summary.totalContacts}</span><span class="stat-l">Personas distintas</span></div>
+        <div class="stat"><span class="stat-n">${summary.newContactsLast7d}</span><span class="stat-l">Nuevas (7 dias)</span></div>
+      </div>
+      ${
+        summary.contacts.length
+          ? `<table class="contacts-table">
+        <thead><tr><th>Numero</th><th>Primer mensaje</th><th>Ultimo mensaje</th><th>Mensajes</th></tr></thead>
+        <tbody>${contactsRows}</tbody>
+      </table>`
+          : `<p class="hint">Todavia no llego ningun mensaje.</p>`
+      }
+    </fieldset>
 
     <fieldset>
       <legend>Metodo de pago en Meta</legend>
       <p class="hint">Ahi es donde Plasticos Superior carga la tarjeta con la que Meta cobra los mensajes salientes.</p>
       <a class="payment-link" href="${escapeHtml(billingUrl)}" target="_blank" rel="noopener">Ir a configurar el metodo de pago en Meta &rarr;</a>
+    </fieldset>
+
+    <fieldset>
+      <legend>Cambiar contrasena</legend>
+      <form method="post" action="/admin/change-password">
+        <input type="hidden" name="_csrf" value="${csrf}">
+        <label>Contrasena actual</label>
+        <input type="password" name="current_password" autocomplete="current-password" required>
+        <label>Contrasena nueva</label>
+        <input type="password" name="new_password" autocomplete="new-password" required minlength="8">
+        <label>Repetir contrasena nueva</label>
+        <input type="password" name="new_password_confirm" autocomplete="new-password" required minlength="8">
+        <button type="submit">Cambiar contrasena</button>
+      </form>
     </fieldset>
 
     <div class="layout-grid">
@@ -385,6 +436,35 @@ router.post("/", requireAuth, (req, res) => {
 
   res.redirect("/admin?ok=1");
 });
+
+router.post("/change-password", requireAuth, (req, res) => {
+  if (!req.body._csrf || req.body._csrf !== req.session.csrfToken) {
+    return res.status(403).send(layout("Error", `<h1>Formulario invalido</h1><p>Volve a intentar desde el panel.</p>`));
+  }
+
+  const { current_password, new_password, new_password_confirm } = req.body;
+  const expectedHash = process.env.ADMIN_PASSWORD_HASH || "";
+  const currentOk = typeof current_password === "string" && bcrypt.compareSync(current_password, expectedHash);
+  const newOk =
+    typeof new_password === "string" &&
+    new_password.length >= 8 &&
+    new_password === new_password_confirm;
+
+  if (!currentOk || !newOk) {
+    return res.redirect("/admin?pw=err");
+  }
+
+  updateAdminPasswordHash(bcrypt.hashSync(new_password, 10));
+  res.redirect("/admin?pw=ok");
+});
+
+function formatDate(iso) {
+  try {
+    return new Date(iso).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" });
+  } catch {
+    return iso;
+  }
+}
 
 function escapeHtml(str) {
   if (!str) return "";

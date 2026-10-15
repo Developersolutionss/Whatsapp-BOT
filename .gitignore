@@ -2,5 +2,8 @@ node_modules/
 .env
 *.log
 
+# Datos de uso (contactos, contadores de mensajes) - estado del servidor, no del repo
+data/
+
 # Notas locales de instalacion (contienen secretos)
 INSTALACION_LOCAL.md

@@ -1,4 +1,5 @@
 const axios = require("axios");
+const stats = require("./stats");
 
 const GRAPH_VERSION = "v21.0";
 
@@ -14,12 +15,14 @@ function client() {
 }
 
 async function sendText(to, body) {
-  return client().post("/messages", {
+  const result = await client().post("/messages", {
     messaging_product: "whatsapp",
     to,
     type: "text",
     text: { body },
   });
+  stats.recordOutgoing();
+  return result;
 }
 
 // WhatsApp permite maximo 3 "reply buttons" por mensaje. Con 4 departamentos
@@ -31,7 +34,7 @@ async function sendDepartmentMenu(to, departments) {
     "Elegi el area con la que queres comunicarte:";
   const buttonText = process.env.WELCOME_BUTTON_TEXT || "Ver opciones";
 
-  return client().post("/messages", {
+  const result = await client().post("/messages", {
     messaging_product: "whatsapp",
     to,
     type: "interactive",
@@ -54,6 +57,8 @@ async function sendDepartmentMenu(to, departments) {
       },
     },
   });
+  stats.recordOutgoing();
+  return result;
 }
 
 async function sendDepartmentConfirmation(to, department) {

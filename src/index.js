@@ -10,6 +10,7 @@ const {
 } = require("./whatsapp");
 const adminRouter = require("./admin");
 const privacyRouter = require("./privacy");
+const stats = require("./stats");
 
 const app = express();
 app.use(express.json());
@@ -51,6 +52,7 @@ app.post("/webhook", async (req, res) => {
     if (!message) return; // eventos de status (delivered/read), ignorar
 
     const from = message.from;
+    stats.recordIncoming(from);
     const departments = buildDepartments();
 
     if (message.type === "interactive" && message.interactive?.type === "list_reply") {

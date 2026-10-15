@@ -4,12 +4,14 @@ const path = require("path");
 const ENV_PATH = path.join(__dirname, "..", ".env");
 
 // Campos de negocio editables desde el panel. Deliberadamente NO incluye
-// PORT (rompe el proxy de Nginx) ni ADMIN_USERNAME/ADMIN_PASSWORD_HASH/
-// SESSION_SECRET (credenciales del propio panel, se cambian aparte).
+// WHATSAPP_TOKEN, PHONE_NUMBER_ID ni VERIFY_TOKEN (son credenciales tecnicas
+// de Meta: si el cliente las toca y las rompe, el bot deja de recibir o
+// mandar mensajes), ni PORT (rompe el proxy de Nginx), ni
+// ADMIN_USERNAME/ADMIN_PASSWORD_HASH/SESSION_SECRET (credenciales del propio
+// panel; la contrasena se cambia con su propio formulario, ver
+// updateAdminPasswordHash). Esos campos solo se tocan a mano en el .env del
+// servidor.
 const EDITABLE_KEYS = [
-  "WHATSAPP_TOKEN",
-  "PHONE_NUMBER_ID",
-  "VERIFY_TOKEN",
   "DEPT_CONTABILIDAD",
   "DEPT_PUNTO_DE_VENTA",
   "DEPT_ADMINISTRACION",
@@ -20,7 +22,7 @@ const EDITABLE_KEYS = [
   "META_BILLING_URL",
 ];
 
-const SECRET_KEYS = new Set(["WHATSAPP_TOKEN", "VERIFY_TOKEN"]);
+const SECRET_KEYS = new Set();
 
 function parseEnvFile() {
   const raw = fs.readFileSync(ENV_PATH, "utf8");
@@ -81,4 +83,23 @@ function updateEnvValues(updates) {
   fs.writeFileSync(ENV_PATH, newLines.join("\n"));
 }
 
-module.exports = { EDITABLE_KEYS, SECRET_KEYS, readEditableValues, updateEnvValues, mask };
+// Cambia unicamente ADMIN_PASSWORD_HASH. Separado de updateEnvValues a
+// proposito: este campo nunca debe quedar expuesto en el formulario generico
+// del panel, solo accesible desde el flujo dedicado de "cambiar contrasena".
+function updateAdminPasswordHash(hash) {
+  const { lines, values } = parseEnvFile();
+  let found = false;
+  const newLines = lines.map((line) => {
+    const match = line.match(/^([A-Z0-9_]+)=.*$/);
+    if (match && match[1] === "ADMIN_PASSWORD_HASH") {
+      found = true;
+      return `ADMIN_PASSWORD_HASH=${hash}`;
+    }
+    return line;
+  });
+  if (!found) newLines.push(`ADMIN_PASSWORD_HASH=${hash}`);
+  fs.writeFileSync(ENV_PATH, newLines.join("\n"));
+  process.env.ADMIN_PASSWORD_HASH = hash; // aplica sin reiniciar el proceso
+}
+
+module.exports = { EDITABLE_KEYS, SECRET_KEYS, readEditableValues, updateEnvValues, updateAdminPasswordHash, mask };
