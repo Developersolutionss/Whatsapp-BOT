@@ -56,12 +56,13 @@ app.post("/webhook", async (req, res) => {
     if (!message) return; // eventos de status (delivered/read), ignorar
 
     const from = message.from;
-    stats.recordIncoming(from);
     const departments = buildDepartments();
+    const isListReply = message.type === "interactive" && message.interactive?.type === "list_reply";
+    const selectedDept = isListReply ? departments.find((d) => d.id === message.interactive.list_reply.id) : null;
+    stats.recordIncoming(from, selectedDept ? selectedDept.title : null);
 
-    if (message.type === "interactive" && message.interactive?.type === "list_reply") {
-      const selectedId = message.interactive.list_reply.id;
-      const department = departments.find((d) => d.id === selectedId);
+    if (isListReply) {
+      const department = selectedDept;
 
       if (department && department.phone) {
         await sendDepartmentConfirmation(from, department);

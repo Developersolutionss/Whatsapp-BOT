@@ -5,6 +5,7 @@ const { execFile } = require("child_process");
 const { EDITABLE_KEYS, readEditableValues, updateEnvValues, updateAdminPasswordHash } = require("./envStore");
 const { buildDepartments } = require("./departments");
 const stats = require("./stats");
+const { detectCountry } = require("./country");
 const fs = require("fs");
 const path = require("path");
 
@@ -116,7 +117,7 @@ function layout(title, bodyHtml, wide, centered) {
   .flash-ok { background: #203625; color: #bcd4bf; padding: .7rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-size: .9rem; }
   .flash-err { background: #3a2323; color: #e0bcbc; padding: .7rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-size: .9rem; }
   a.payment-link { display: inline-block; margin-top: .3rem; color: #8fb0d8; }
-  .logout-form { margin: 0 0 0 auto; flex-shrink: 0; }
+  .logout-form { margin: 0; flex-shrink: 0; }
   button.logout { display: inline-flex; align-items: center; gap: .4rem; width: auto; margin: 0; min-height: 40px; padding: .5rem .9rem; background: transparent; color: var(--muted); border: 1px solid var(--panel-line); font-weight: 500; font-size: .85rem; }
   button.logout:hover { background: #3a2323; color: #e0bcbc; border-color: #5a3434; }
   @media (max-width: 480px) {
@@ -129,7 +130,21 @@ function layout(title, bodyHtml, wide, centered) {
     button.logout .logout-text { display: none; }
   }
   /* --- Cambiar contrasena --- */
-  .pw-card { max-width: 480px; padding: 1rem 1.4rem 1.4rem; }
+  .menu-wrap { position: relative; margin-left: auto; flex-shrink: 0; }
+  button.menu-btn { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; margin: 0; padding: 0; background: transparent; color: var(--muted); border: 1px solid var(--panel-line); }
+  button.menu-btn:hover, button.menu-btn.open { background: var(--field); color: var(--ink); border-color: #3a4048; }
+  button.menu-btn:focus-visible { outline: 2px solid #8fb0d8; outline-offset: 2px; }
+  .pw-menu { position: absolute; top: calc(100% + .5rem); right: 0; z-index: 30; width: min(380px, calc(100vw - 2rem)); box-sizing: border-box; background: var(--panel); border: 1px solid #3a4048; border-radius: 10px; padding: .4rem 1.1rem 1.1rem; box-shadow: 0 12px 32px rgba(0,0,0,.55); animation: advOpen .2s ease; }
+  .pw-menu[hidden] { display: none; }
+  .menu-tabs { display: flex; gap: .3rem; border-bottom: 1px solid var(--panel-line); margin: .3rem 0 .6rem; }
+  button.menu-tab { width: auto; margin: 0 0 -1px; flex: 1; min-height: 44px; padding: .5rem .6rem; background: transparent; color: var(--muted); border: none; border-bottom: 2px solid transparent; border-radius: 6px 6px 0 0; font-size: .88rem; font-weight: 500; }
+  button.menu-tab:hover { background: transparent; color: var(--ink); }
+  button.menu-tab.active { color: var(--ink); border-bottom-color: var(--accent); }
+  button.menu-tab:focus-visible { outline: 2px solid #8fb0d8; outline-offset: -2px; }
+  .menu-panel[hidden] { display: none; }
+  .menu-panel .hint { margin: .5rem 0 .8rem; }
+  .menu-panel a.payment-link { margin: 0 0 .3rem; }
+  .pw-menu-title { color: var(--ink); font-size: .95rem; font-weight: 600; padding: .6rem 0 .1rem; }
   .pw-form { display: flex; flex-direction: column; gap: .2rem; }
   .pw-field label { margin: .8rem 0 .35rem; }
   .pw-input { position: relative; }
@@ -147,7 +162,7 @@ function layout(title, bodyHtml, wide, centered) {
   .pw-msg.err { background: #3a2323; color: #e8bcbc; border-color: #5a3434; }
   button.pw-submit { margin-top: 1rem; min-height: 48px; }
   button.pw-submit:focus-visible, button.pw-toggle:focus-visible { outline: 2px solid #8fb0d8; outline-offset: 2px; }
-  @media (max-width: 480px) { .pw-card { max-width: none; padding: .8rem 1rem 1.1rem; } .pw-input input { font-size: 16px; } }
+  @media (max-width: 480px) { button.menu-btn { width: 44px; height: 44px; } .pw-input input { font-size: 16px; } }
 
   /* --- Seccion Avanzado (acordeon) --- */
   details.advanced { margin-top: 1.5rem; border: 1px solid var(--panel-line); border-radius: 10px; background: rgba(255,255,255,.015); transition: border-color .15s; }
@@ -202,6 +217,24 @@ function layout(title, bodyHtml, wide, centered) {
   .panel-logo { height: 36px; width: auto; flex-shrink: 0; object-fit: contain; border-radius: 6px; background: #f1f1ef; padding: 3px 6px; }
   .panel-header h1 { margin: 0; }
 
+  .menu-link { display: flex; align-items: center; gap: .6rem; min-height: 46px; margin: .5rem 0 .2rem; padding: .5rem .8rem; border: 1px solid var(--panel-line); border-radius: 8px; background: var(--field); color: var(--ink); text-decoration: none; font-size: .9rem; font-weight: 500; transition: border-color .15s, background .15s; }
+  .menu-link svg { color: var(--accent); flex-shrink: 0; }
+  .menu-link:hover { border-color: var(--accent); }
+  .menu-link:focus-visible { outline: 2px solid #8fb0d8; outline-offset: 2px; }
+  .menu-link-arrow { margin-left: auto; color: var(--muted); }
+  .back-link { display: inline-flex; align-items: center; gap: .4rem; min-height: 40px; padding: .5rem .9rem; border: 1px solid var(--panel-line); border-radius: 6px; color: var(--muted); text-decoration: none; font-size: .85rem; margin-left: auto; }
+  .back-link:hover { color: var(--ink); border-color: #3a4048; }
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--panel-line); border-radius: 8px; }
+  .events-table { width: 100%; min-width: 520px; border-collapse: collapse; font-size: .85rem; }
+  .events-table th, .events-table td { text-align: left; padding: .65rem .8rem; border-bottom: 1px solid var(--panel-line); color: var(--ink); white-space: nowrap; }
+  .events-table tbody tr:last-child td { border-bottom: none; }
+  .events-table tbody tr:hover { background: rgba(255,255,255,.02); }
+  .events-table th { color: var(--muted); font-weight: 600; font-size: .72rem; text-transform: uppercase; letter-spacing: .03em; background: var(--field); }
+  .tag { display: inline-block; padding: .15rem .55rem; border-radius: 999px; font-size: .78rem; background: #203625; color: #bcd4bf; border: 1px solid #2f5a39; }
+  .tag.muted { background: transparent; color: var(--muted); border-color: var(--panel-line); }
+  .stat-card-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .8rem; margin: 1rem 0 1.5rem; }
+  .stat-card { background: var(--field); border: 1px solid var(--panel-line); border-left: 3px solid var(--accent); border-radius: 8px; padding: .8rem 1rem; display: flex; flex-direction: column; }
+  .section-title { font-size: 1rem; font-weight: 600; margin: 0 0 .7rem; }
   .stats-row { display: flex; flex-wrap: wrap; gap: 1.2rem; margin-bottom: 1rem; }
   .stat { display: flex; flex-direction: column; }
   .stat-n { font-size: 1.6rem; font-weight: 700; color: var(--ink); }
@@ -274,6 +307,56 @@ router.post("/logout", requireAuth, (req, res) => {
   req.session.destroy(() => res.redirect("/admin/login"));
 });
 
+// --- Vista de actividad: contadores + historial de mensajes entrantes ---
+router.get("/actividad", requireAuth, (req, res) => {
+  const summary = stats.getSummary(0, 100);
+  const rows = summary.events
+    .map((e) => {
+      const country = detectCountry(e.phone);
+      const area = e.area ? `<span class="tag">${escapeHtml(e.area)}</span>` : `<span class="tag muted">Solo menu</span>`;
+      return `
+      <tr>
+        <td>${formatDate(e.at)}</td>
+        <td>${escapeHtml(e.phone)}</td>
+        <td>${area}</td>
+        <td>${country.flag ? country.flag + " " : ""}${escapeHtml(country.name)}</td>
+      </tr>`;
+    })
+    .join("");
+
+  res.send(
+    layout(
+      "Actividad",
+      `
+    <div class="panel-header">
+      <img src="${LOGO_SRC}" alt="Plasticos Superior" class="panel-logo" width="105" height="36" decoding="async">
+      <h1>Registro de actividad</h1>
+      <a class="back-link" href="/admin">&larr; <span>Volver</span></a>
+    </div>
+
+    <div class="stat-card-row">
+      <div class="stat-card"><span class="stat-n">${summary.totalIncoming}</span><span class="stat-l">Mensajes recibidos</span></div>
+      <div class="stat-card"><span class="stat-n">${summary.totalOutgoing}</span><span class="stat-l">Mensajes enviados</span></div>
+      <div class="stat-card"><span class="stat-n">${summary.totalContacts}</span><span class="stat-l">Personas distintas</span></div>
+      <div class="stat-card"><span class="stat-n">${summary.newContactsLast7d}</span><span class="stat-l">Nuevas (7 dias)</span></div>
+    </div>
+
+    <h2 class="section-title">Ultimos movimientos</h2>
+    ${
+      summary.events.length
+        ? `<div class="table-scroll"><table class="events-table">
+      <thead><tr><th>Fecha / hora</th><th>Numero</th><th>Area elegida</th><th>Pais</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    <p class="hint">Se muestran los ultimos ${summary.events.length} movimientos.</p>`
+        : `<p class="hint">Todavia no llego ningun mensaje.</p>`
+    }
+  `,
+      true
+    )
+  );
+});
+
 router.get("/", requireAuth, (req, res) => {
   const values = readEditableValues();
   if (!req.session.csrfToken) req.session.csrfToken = crypto.randomBytes(24).toString("hex");
@@ -285,6 +368,7 @@ router.get("/", requireAuth, (req, res) => {
     short: "La contrasena nueva debe tener al menos 8 caracteres.",
     err: "No se pudo cambiar la contrasena. Revisa los datos e intenta de nuevo.",
   };
+  const pwOpen = Boolean(req.query.pw); // si vuelve de enviar el form, abre el menu para mostrar el resultado
   const pwOk = req.query.pw === "ok" ? `<div class="pw-msg ok" role="status">${ICON_OK}<span>Contrasena actualizada con exito.</span></div>` : "";
   const pwErr = PW_ERRORS[req.query.pw] ? `<div class="pw-msg err" role="alert">${ICON_ERR}<span>${PW_ERRORS[req.query.pw]}</span></div>` : "";
 
@@ -312,19 +396,6 @@ router.get("/", requireAuth, (req, res) => {
     })
     .join("");
 
-  const summary = stats.getSummary(30);
-  const contactsRows = summary.contacts
-    .map(
-      (c) => `
-      <tr>
-        <td>${escapeHtml(c.phone)}</td>
-        <td>${formatDate(c.firstSeen)}</td>
-        <td>${formatDate(c.lastSeen)}</td>
-        <td>${c.messageCount}</td>
-      </tr>`
-    )
-    .join("");
-
   res.send(
     layout(
       "Panel",
@@ -332,41 +403,29 @@ router.get("/", requireAuth, (req, res) => {
     <div class="panel-header">
       <img src="${LOGO_SRC}" alt="Plasticos Superior" class="panel-logo" width="105" height="36" decoding="async">
       <h1>Configuracion del bot</h1>
-      <form class="logout-form" method="post" action="/admin/logout">
-        <button type="submit" class="logout" aria-label="Cerrar sesion" title="Cerrar sesion">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          <span class="logout-text">Salir</span>
+      <!-- Menu hamburguesa: metodo de pago y cambio de contrasena, ocultos hasta abrirlo -->
+      <div class="menu-wrap">
+        <button type="button" id="pwToggle" class="menu-btn" aria-label="Configuracion" aria-haspopup="true" aria-expanded="${pwOpen}" aria-controls="pwMenu" title="Configuracion">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
         </button>
-      </form>
-    </div>
-    ${ok}
+        <div id="pwMenu" class="pw-menu" ${pwOpen ? "" : "hidden"}>
+          <a class="menu-link" href="/admin/actividad">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>
+            <span>Registro de actividad</span>
+            <span class="menu-link-arrow" aria-hidden="true">&rarr;</span>
+          </a>
+          <!-- Pestanas del menu de configuracion -->
+          <div class="menu-tabs" role="tablist">
+            <button type="button" role="tab" class="menu-tab${pwOpen ? "" : " active"}" id="tabPago" data-tab="pago" aria-controls="panelPago" aria-selected="${!pwOpen}">Metodo de pago</button>
+            <button type="button" role="tab" class="menu-tab${pwOpen ? " active" : ""}" id="tabPass" data-tab="pass" aria-controls="panelPass" aria-selected="${pwOpen}">Contrasena</button>
+          </div>
 
-    <fieldset>
-      <legend>Actividad</legend>
-      <div class="stats-row">
-        <div class="stat"><span class="stat-n">${summary.totalIncoming}</span><span class="stat-l">Mensajes recibidos</span></div>
-        <div class="stat"><span class="stat-n">${summary.totalOutgoing}</span><span class="stat-l">Mensajes enviados</span></div>
-        <div class="stat"><span class="stat-n">${summary.totalContacts}</span><span class="stat-l">Personas distintas</span></div>
-        <div class="stat"><span class="stat-n">${summary.newContactsLast7d}</span><span class="stat-l">Nuevas (7 dias)</span></div>
-      </div>
-      ${
-        summary.contacts.length
-          ? `<table class="contacts-table">
-        <thead><tr><th>Numero</th><th>Primer mensaje</th><th>Ultimo mensaje</th><th>Mensajes</th></tr></thead>
-        <tbody>${contactsRows}</tbody>
-      </table>`
-          : `<p class="hint">Todavia no llego ningun mensaje.</p>`
-      }
-    </fieldset>
+          <div class="menu-panel" id="panelPago" role="tabpanel" aria-labelledby="tabPago" ${pwOpen ? "hidden" : ""}>
+            <p class="hint">Ahi es donde Plasticos Superior carga la tarjeta con la que Meta cobra los mensajes salientes.</p>
+            <a class="payment-link" href="${escapeHtml(billingUrl)}" target="_blank" rel="noopener">Ir a configurar el metodo de pago en Meta &rarr;</a>
+          </div>
 
-    <fieldset>
-      <legend>Metodo de pago en Meta</legend>
-      <p class="hint">Ahi es donde Plasticos Superior carga la tarjeta con la que Meta cobra los mensajes salientes.</p>
-      <a class="payment-link" href="${escapeHtml(billingUrl)}" target="_blank" rel="noopener">Ir a configurar el metodo de pago en Meta &rarr;</a>
-    </fieldset>
-
-    <fieldset class="pw-card">
-      <legend>Cambiar contrasena</legend>
+          <div class="menu-panel" id="panelPass" role="tabpanel" aria-labelledby="tabPass" ${pwOpen ? "" : "hidden"}>
       ${pwOk}
       ${pwErr}
       <form id="pwForm" class="pw-form" method="post" action="/admin/change-password" novalidate>
@@ -409,7 +468,49 @@ router.get("/", requireAuth, (req, res) => {
           form.addEventListener("input", function () { box.hidden = true; });
         })();
       </script>
-    </fieldset>
+          </div>
+        </div>
+        <script>
+          (function () {
+            var btn = document.getElementById("pwToggle");
+            var menu = document.getElementById("pwMenu");
+            function setOpen(open) {
+              menu.hidden = !open;
+              btn.setAttribute("aria-expanded", open);
+              btn.classList.toggle("open", open);
+              if (open) { var f = menu.querySelector(".menu-panel:not([hidden]) input"); if (f) f.focus(); }
+            }
+            // Pestanas: muestra un panel a la vez
+            var tabs = menu.querySelectorAll(".menu-tab");
+            function showTab(name) {
+              tabs.forEach(function (t) {
+                var on = t.getAttribute("data-tab") === name;
+                t.classList.toggle("active", on);
+                t.setAttribute("aria-selected", on);
+                document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
+              });
+            }
+            tabs.forEach(function (t) { t.addEventListener("click", function () { showTab(t.getAttribute("data-tab")); }); });
+            btn.classList.toggle("open", !menu.hidden);
+            btn.addEventListener("click", function () { setOpen(menu.hidden); });
+            // Cerrar con Escape o al tocar fuera del menu
+            document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !menu.hidden) { setOpen(false); btn.focus(); } });
+            document.addEventListener("click", function (e) { if (!menu.hidden && !menu.contains(e.target) && !btn.contains(e.target)) setOpen(false); });
+          })();
+        </script>
+      </div>
+      <form class="logout-form" method="post" action="/admin/logout">
+        <button type="submit" class="logout" aria-label="Cerrar sesion" title="Cerrar sesion">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span class="logout-text">Salir</span>
+        </button>
+      </form>
+    </div>
+    ${ok}
+
+
+
+
 
     <div class="layout-grid">
       <form method="post" action="/admin">
