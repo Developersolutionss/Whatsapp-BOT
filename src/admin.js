@@ -5,6 +5,34 @@ const { execFile } = require("child_process");
 const { EDITABLE_KEYS, readEditableValues, updateEnvValues, updateAdminPasswordHash } = require("./envStore");
 const { buildDepartments } = require("./departments");
 const stats = require("./stats");
+const fs = require("fs");
+const path = require("path");
+
+// Logo incrustado como data URI: evita una peticion extra que a veces falla o llega tarde
+// (proxy, cache, conexion lenta). Si no se puede leer, se usa el archivo estatico.
+const ICON_OK = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12.5l3 3 5-6"/></svg>`;
+const ICON_ERR = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 7v6M12 16.5v.5"/></svg>`;
+const ICON_EYE = `<svg class="i-show" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg><svg class="i-hide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.9 17.9A10.9 10.9 0 0 1 12 19C5 19 1 12 1 12a18.6 18.6 0 0 1 5.1-5.9M9.9 5.1A10.7 10.7 0 0 1 12 5c7 0 11 7 11 7a18.5 18.5 0 0 1-2.2 3.2M1 1l22 22"/></svg>`;
+
+// Campo de contrasena con boton ver/ocultar
+function pwField(label, name, autocomplete, extra = "") {
+  return `<div class="pw-field">
+          <label for="${name}">${label}</label>
+          <div class="pw-input">
+            <input type="password" id="${name}" name="${name}" autocomplete="${autocomplete}" required ${extra}>
+            <button type="button" class="pw-toggle" aria-label="Mostrar contrasena" aria-pressed="false">${ICON_EYE}</button>
+          </div>
+        </div>`;
+}
+
+const LOGO_FILE = "/logo.jpeg";
+let LOGO_SRC = LOGO_FILE;
+try {
+  const buf = fs.readFileSync(path.join(__dirname, "..", "public", "logo.jpeg"));
+  LOGO_SRC = `data:image/jpeg;base64,${buf.toString("base64")}`;
+} catch (e) {
+  console.error("No se pudo incrustar el logo:", e.message);
+}
 
 const router = express.Router();
 
@@ -88,7 +116,63 @@ function layout(title, bodyHtml, wide, centered) {
   .flash-ok { background: #203625; color: #bcd4bf; padding: .7rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-size: .9rem; }
   .flash-err { background: #3a2323; color: #e0bcbc; padding: .7rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-size: .9rem; }
   a.payment-link { display: inline-block; margin-top: .3rem; color: #8fb0d8; }
-  .logout { float: right; font-size: .85rem; color: var(--muted); text-decoration: none; }
+  .logout-form { margin: 0 0 0 auto; flex-shrink: 0; }
+  button.logout { display: inline-flex; align-items: center; gap: .4rem; width: auto; margin: 0; min-height: 40px; padding: .5rem .9rem; background: transparent; color: var(--muted); border: 1px solid var(--panel-line); font-weight: 500; font-size: .85rem; }
+  button.logout:hover { background: #3a2323; color: #e0bcbc; border-color: #5a3434; }
+  @media (max-width: 480px) {
+    body { padding: 1rem .75rem; }
+    .card { padding: 1.2rem; }
+    .panel-header { gap: .6rem; }
+    .panel-header h1 { font-size: 1.05rem; }
+    .panel-logo { height: 30px; }
+    button.logout { min-width: 44px; min-height: 44px; justify-content: center; padding: .5rem .7rem; }
+    button.logout .logout-text { display: none; }
+  }
+  /* --- Cambiar contrasena --- */
+  .pw-card { max-width: 480px; padding: 1rem 1.4rem 1.4rem; }
+  .pw-form { display: flex; flex-direction: column; gap: .2rem; }
+  .pw-field label { margin: .8rem 0 .35rem; }
+  .pw-input { position: relative; }
+  .pw-input input[type=password], .pw-input input[type=text] { padding-right: 3rem; min-height: 46px; }
+  .pw-input input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(75,122,82,.25); }
+  button.pw-toggle { position: absolute; top: 0; right: 0; width: 46px; height: 100%; margin: 0; padding: 0; background: transparent; color: var(--muted); display: flex; align-items: center; justify-content: center; border-radius: 0 6px 6px 0; }
+  button.pw-toggle:hover { background: transparent; color: var(--ink); }
+  .pw-toggle .i-hide { display: none; }
+  .pw-toggle.on .i-hide { display: block; }
+  .pw-toggle.on .i-show { display: none; }
+  .pw-msg { display: flex; align-items: flex-start; gap: .55rem; padding: .7rem .9rem; border-radius: 8px; font-size: .88rem; line-height: 1.35; margin: .4rem 0; border: 1px solid; }
+  .pw-msg[hidden] { display: none; }
+  .pw-msg svg { flex-shrink: 0; margin-top: 1px; }
+  .pw-msg.ok { background: #1d3223; color: #b9d9bf; border-color: #2f5a39; }
+  .pw-msg.err { background: #3a2323; color: #e8bcbc; border-color: #5a3434; }
+  button.pw-submit { margin-top: 1rem; min-height: 48px; }
+  button.pw-submit:focus-visible, button.pw-toggle:focus-visible { outline: 2px solid #8fb0d8; outline-offset: 2px; }
+  @media (max-width: 480px) { .pw-card { max-width: none; padding: .8rem 1rem 1.1rem; } .pw-input input { font-size: 16px; } }
+
+  /* --- Seccion Avanzado (acordeon) --- */
+  details.advanced { margin-top: 1.5rem; border: 1px solid var(--panel-line); border-radius: 10px; background: rgba(255,255,255,.015); transition: border-color .15s; }
+  details.advanced:hover, details.advanced[open] { border-color: #3a4048; }
+  details.advanced summary { display: flex; align-items: center; justify-content: space-between; gap: .5rem; min-height: 48px; padding: .75rem 1rem; cursor: pointer; list-style: none; color: var(--muted); font-size: .9rem; font-weight: 500; border-radius: 10px; user-select: none; }
+  details.advanced summary::-webkit-details-marker { display: none; }
+  details.advanced summary:hover { color: var(--ink); }
+  details.advanced summary:focus-visible { outline: 2px solid #8fb0d8; outline-offset: 2px; }
+  details.advanced .chev { transition: transform .25s ease; }
+  details.advanced[open] .chev { transform: rotate(180deg); }
+  details.advanced[open] summary { color: var(--ink); }
+  .advanced-body { padding: 0 1rem 1.1rem; max-width: 100%; animation: advOpen .25s ease; }
+  .advanced-body label { margin-top: .2rem; }
+  .advanced-body input { min-width: 0; text-overflow: ellipsis; }
+  .advanced-body input:focus { box-shadow: 0 0 0 3px rgba(75,122,82,.25); }
+  @keyframes advOpen { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .advanced-body { animation: none; } details.advanced .chev { transition: none; } }
+  @media (min-width: 880px) { .advanced-body input { max-width: 640px; } }
+
+  /* Boton principal: hover/focus/active mas claros, ancho completo en movil */
+  form > button[type=submit] { min-height: 48px; box-shadow: 0 1px 0 rgba(255,255,255,.06) inset; }
+  form > button[type=submit]:hover { box-shadow: 0 4px 12px rgba(0,0,0,.3); }
+  form > button[type=submit]:active { transform: translateY(1px); }
+  form > button[type=submit]:focus-visible { outline: 2px solid #8fb0d8; outline-offset: 2px; }
+
   fieldset { border: 1px solid var(--panel-line); border-radius: 8px; margin-top: 1.5rem; }
   legend { padding: 0 .5rem; color: var(--muted); font-size: .9rem; }
 
@@ -115,7 +199,7 @@ function layout(title, bodyHtml, wide, centered) {
   .preview-label { font-size: .8rem; color: #64748b; margin-bottom: .5rem; }
 
   .panel-header { display: flex; align-items: center; gap: .9rem; margin-bottom: 1rem; }
-  .panel-logo { height: 36px; width: auto; border-radius: 6px; background: #f1f1ef; padding: 3px 6px; }
+  .panel-logo { height: 36px; width: auto; flex-shrink: 0; object-fit: contain; border-radius: 6px; background: #f1f1ef; padding: 3px 6px; }
   .panel-header h1 { margin: 0; }
 
   .stats-row { display: flex; flex-wrap: wrap; gap: 1.2rem; margin-bottom: 1rem; }
@@ -144,7 +228,7 @@ router.get("/login", (req, res) => {
     layout(
       "Ingresar",
       `
-    <div class="login-logo-plate"><img src="/logo.jpeg" alt="Plasticos Superior San Judas SAS"></div>
+    <div class="login-logo-plate"><img src="${LOGO_SRC}" alt="Plasticos Superior" width="280" height="96" decoding="async"></div>
     <h1 class="login-title">Panel de administracion</h1>
     <p class="login-sub">Bot de WhatsApp</p>
     ${error}
@@ -195,8 +279,14 @@ router.get("/", requireAuth, (req, res) => {
   if (!req.session.csrfToken) req.session.csrfToken = crypto.randomBytes(24).toString("hex");
   const csrf = req.session.csrfToken;
   const ok = req.query.ok ? `<div class="flash-ok">Cambios guardados. El bot se reinicio con la nueva configuracion.</div>` : "";
-  const pwOk = req.query.pw === "ok" ? `<div class="flash-ok">Contrasena actualizada.</div>` : "";
-  const pwErr = req.query.pw === "err" ? `<div class="flash-err">La contrasena actual no es correcta, o la nueva no coincide.</div>` : "";
+  const PW_ERRORS = {
+    wrong: "La contrasena actual no es correcta.",
+    mismatch: "Las contrasenas nuevas no coinciden.",
+    short: "La contrasena nueva debe tener al menos 8 caracteres.",
+    err: "No se pudo cambiar la contrasena. Revisa los datos e intenta de nuevo.",
+  };
+  const pwOk = req.query.pw === "ok" ? `<div class="pw-msg ok" role="status">${ICON_OK}<span>Contrasena actualizada con exito.</span></div>` : "";
+  const pwErr = PW_ERRORS[req.query.pw] ? `<div class="pw-msg err" role="alert">${ICON_ERR}<span>${PW_ERRORS[req.query.pw]}</span></div>` : "";
 
   const billingUrl = values.META_BILLING_URL || "https://business.facebook.com/billing_hub/payment_methods/";
 
@@ -239,15 +329,17 @@ router.get("/", requireAuth, (req, res) => {
     layout(
       "Panel",
       `
-    <a class="logout" href="#" onclick="document.getElementById('logoutForm').submit();return false;">Salir</a>
-    <form id="logoutForm" method="post" action="/admin/logout" style="display:none"></form>
     <div class="panel-header">
-      <img src="/logo.jpeg" alt="Plasticos Superior San Judas SAS" class="panel-logo">
+      <img src="${LOGO_SRC}" alt="Plasticos Superior" class="panel-logo" width="105" height="36" decoding="async">
       <h1>Configuracion del bot</h1>
+      <form class="logout-form" method="post" action="/admin/logout">
+        <button type="submit" class="logout" aria-label="Cerrar sesion" title="Cerrar sesion">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span class="logout-text">Salir</span>
+        </button>
+      </form>
     </div>
     ${ok}
-    ${pwOk}
-    ${pwErr}
 
     <fieldset>
       <legend>Actividad</legend>
@@ -273,18 +365,50 @@ router.get("/", requireAuth, (req, res) => {
       <a class="payment-link" href="${escapeHtml(billingUrl)}" target="_blank" rel="noopener">Ir a configurar el metodo de pago en Meta &rarr;</a>
     </fieldset>
 
-    <fieldset>
+    <fieldset class="pw-card">
       <legend>Cambiar contrasena</legend>
-      <form method="post" action="/admin/change-password">
+      ${pwOk}
+      ${pwErr}
+      <form id="pwForm" class="pw-form" method="post" action="/admin/change-password" novalidate>
         <input type="hidden" name="_csrf" value="${csrf}">
-        <label>Contrasena actual</label>
-        <input type="password" name="current_password" autocomplete="current-password" required>
-        <label>Contrasena nueva</label>
-        <input type="password" name="new_password" autocomplete="new-password" required minlength="8">
-        <label>Repetir contrasena nueva</label>
-        <input type="password" name="new_password_confirm" autocomplete="new-password" required minlength="8">
-        <button type="submit">Cambiar contrasena</button>
+        ${pwField("Contrasena actual", "current_password", "current-password")}
+        ${pwField("Contrasena nueva", "new_password", "new-password", 'minlength="8"')}
+        <p class="hint">Minimo 8 caracteres.</p>
+        ${pwField("Repetir contrasena nueva", "new_password_confirm", "new-password", 'minlength="8"')}
+        <div id="pwClient" class="pw-msg err" role="alert" hidden></div>
+        <button type="submit" class="pw-submit">Cambiar contrasena</button>
       </form>
+      <script>
+        (function () {
+          var form = document.getElementById("pwForm");
+          var box = document.getElementById("pwClient");
+          // Ver / ocultar contrasena
+          form.querySelectorAll(".pw-toggle").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+              var input = btn.parentNode.querySelector("input");
+              var show = input.type === "password";
+              input.type = show ? "text" : "password";
+              btn.setAttribute("aria-pressed", show);
+              btn.setAttribute("aria-label", show ? "Ocultar contrasena" : "Mostrar contrasena");
+              btn.classList.toggle("on", show);
+            });
+          });
+          // Validacion rapida antes de enviar (el servidor valida de nuevo)
+          form.addEventListener("submit", function (e) {
+            var n = form.new_password.value, c = form.new_password_confirm.value, msg = "";
+            if (!form.current_password.value) msg = "Escribe tu contrasena actual.";
+            else if (n.length < 8) msg = "La contrasena nueva debe tener al menos 8 caracteres.";
+            else if (n !== c) msg = "Las contrasenas nuevas no coinciden.";
+            if (msg) {
+              e.preventDefault();
+              box.hidden = false;
+              box.innerHTML = ${JSON.stringify(ICON_ERR)} + "<span></span>";
+              box.lastChild.textContent = msg;
+            }
+          });
+          form.addEventListener("input", function () { box.hidden = true; });
+        })();
+      </script>
     </fieldset>
 
     <div class="layout-grid">
@@ -292,12 +416,18 @@ router.get("/", requireAuth, (req, res) => {
         <input type="hidden" name="_csrf" value="${csrf}">
         ${fieldsHtml}
 
-        <fieldset>
-          <legend>Avanzado</legend>
-          <label>${FIELD_LABELS.META_BILLING_URL}</label>
-          <input type="text" name="META_BILLING_URL" value="${escapeHtml(values.META_BILLING_URL)}" placeholder="https://business.facebook.com/billing_hub/payment_methods/">
-          <p class="hint">Si Meta cambia la pantalla, pegá acá la URL exacta de "Métodos de pago" de la cuenta de WhatsApp.</p>
-        </fieldset>
+        <!-- Acordeon nativo: cerrado por defecto; el input sigue dentro del form y se envia igual -->
+        <details class="advanced">
+          <summary>
+            <span>Avanzado</span>
+            <svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </summary>
+          <div class="advanced-body">
+            <label for="META_BILLING_URL">${FIELD_LABELS.META_BILLING_URL}</label>
+            <input type="text" id="META_BILLING_URL" name="META_BILLING_URL" inputmode="url" autocapitalize="off" spellcheck="false" value="${escapeHtml(values.META_BILLING_URL)}" placeholder="https://business.facebook.com/billing_hub/payment_methods/">
+            <p class="hint">Si Meta cambia la pantalla, pega aca la URL exacta de "Metodos de pago" de la cuenta de WhatsApp.</p>
+          </div>
+        </details>
 
         <button type="submit">Guardar y reiniciar el bot</button>
       </form>
@@ -445,14 +575,9 @@ router.post("/change-password", requireAuth, (req, res) => {
   const { current_password, new_password, new_password_confirm } = req.body;
   const expectedHash = process.env.ADMIN_PASSWORD_HASH || "";
   const currentOk = typeof current_password === "string" && bcrypt.compareSync(current_password, expectedHash);
-  const newOk =
-    typeof new_password === "string" &&
-    new_password.length >= 8 &&
-    new_password === new_password_confirm;
-
-  if (!currentOk || !newOk) {
-    return res.redirect("/admin?pw=err");
-  }
+  if (!currentOk) return res.redirect("/admin?pw=wrong");
+  if (typeof new_password !== "string" || new_password.length < 8) return res.redirect("/admin?pw=short");
+  if (new_password !== new_password_confirm) return res.redirect("/admin?pw=mismatch");
 
   updateAdminPasswordHash(bcrypt.hashSync(new_password, 10));
   res.redirect("/admin?pw=ok");
