@@ -1,4 +1,8 @@
-require("dotenv").config();
+// override: true porque PM2 reusa el entorno del proceso anterior entre
+// restarts; sin esto, un valor viejo que ya este en process.env (ej. de un
+// PHONE_NUMBER_ID anterior) le gana silenciosamente al valor nuevo del
+// archivo .env, que es la fuente de verdad real.
+require("dotenv").config({ override: true });
 const path = require("path");
 const express = require("express");
 const session = require("express-session");
