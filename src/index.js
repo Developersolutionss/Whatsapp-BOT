@@ -28,7 +28,7 @@ app.use(
     cookie: { httpOnly: true, sameSite: "lax", maxAge: 1000 * 60 * 60 * 4 },
   })
 );
-app.use(express.static(path.join(__dirname, "..", "public")));
+app.use(express.static(path.join(__dirname, "..", "public"), { maxAge: "7d" }));
 app.use("/admin", adminRouter);
 app.use(privacyRouter); // /privacidad: Meta exige una URL publica de politica de privacidad
 
